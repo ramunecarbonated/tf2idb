@@ -149,9 +149,8 @@ def main(items_game, database_file):
 
     # particles
     for particle_type, particle_list in data['attribute_controlled_attached_particles'].items():
-        for id, property in particle_list.items():
-            dbc.execute('INSERT INTO new_tf2idb_particles (id, name, type) VALUES (?,?,?)',
-                    (id, property['system'], particle_type) )
+        dbc.executemany('INSERT INTO new_tf2idb_particles (id, name, type) VALUES (?,?,?)',
+                ((id, property['system'], particle_type) for id, property in particle_list.items()))
 
     # attributes
     attribute_type = {}
@@ -193,19 +192,17 @@ def main(items_game, database_file):
                 tool = i['tool'].get('type')
 
             has_string_attribute = False
-            if 'static_attrs' in i:
-                for name,value in i['static_attrs'].items():
-                    aid,atype = attribute_type[name.lower()]
-                    if atype == 'string':
-                        has_string_attribute = True
-                    dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,value,1))
+            for name,value in i.get('static_attrs', {}).items():
+                aid,atype = attribute_type[name.lower()]
+                if atype == 'string':
+                    has_string_attribute = True
+                dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,value,1))
 
-            if 'attributes' in i:
-                for name,info in i['attributes'].items():
-                    aid,atype = attribute_type[name.lower()]
-                    if atype == 'string':
-                        has_string_attribute = True
-                    dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,info['value'],0))
+            for name,info in i.get('attributes', {}).items():
+                aid,atype = attribute_type[name.lower()]
+                if atype == 'string':
+                    has_string_attribute = True
+                dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,info['value'],0))
 
             dbc.execute('INSERT INTO new_tf2idb_item '
                 '(id,name,item_name,class,slot,quality,tool_type,min_ilevel,max_ilevel,baseitem,holiday_restriction,has_string_attribute,propername) '

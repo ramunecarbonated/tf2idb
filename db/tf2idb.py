@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 
-TF_FOLDER = 'C:/Program Files (x86)/Steam/steamapps/common/Team Fortress 2/tf/'
-ITEMS_GAME = TF_FOLDER + 'scripts/items/items_game.txt'
-DB_FILE = 'tf2idb.sq3'
-
-# 12/18/2015
-
 import vdf
 import sqlite3
 import traceback
@@ -46,13 +40,13 @@ def resolve_prefabs(item, data):
         prefab_aggregate = item.copy()
     return prefab_aggregate
 
-def main():
+def main(items_game, database_file):
     data = None
-    with open(ITEMS_GAME) as f:
+    with open(items_game) as f:
         data = vdf.parse(f)
         data = data['items_game']
 
-    db = sqlite3.connect(DB_FILE)
+    db = sqlite3.connect(database_file)
     dbc = db.cursor()
 
     dbc.execute('DROP TABLE IF EXISTS new_tf2idb_class')
@@ -227,4 +221,20 @@ def main():
     dbc.execute('VACUUM')
 
 if __name__ == "__main__":
-    main()
+    import argparse, os
+    parser = argparse.ArgumentParser(
+            description="Parses the items_game file into a SQLite database.",
+            usage='%(prog)s ITEMS DATABASE')
+
+    parser.add_argument('items_game', metavar='ITEMS', help="path to items_game.txt")
+    parser.add_argument('database', metavar='DATABASE', help="database to output to")
+
+    args = parser.parse_args()
+
+    if args.items_game is None or not os.path.exists(args.items_game):
+        raise ValueError("missing path to items_game.txt")
+
+    if args.database is None:
+        raise ValueError("missing output database")
+
+    main(args.items_game, args.database)

@@ -100,7 +100,8 @@ def main(items_game, database_file):
     ])
     
     init_table('tf2idb_particles', [
-        ('id', 'INTEGER PRIMARY KEY NOT NULL'), ('name', 'TEXT NOT NULL')
+        ('id', 'INTEGER PRIMARY KEY NOT NULL'), ('name', 'TEXT NOT NULL'),
+        ('type', 'TEXT NOT NULL')
     ])
     
     init_table('tf2idb_equip_conflicts', [
@@ -147,9 +148,10 @@ def main(items_game, database_file):
             ((qname, qdata['value']) for qname, qdata in data['qualities'].items()))
 
     # particles
-    for particle_type,particle_list in data['attribute_controlled_attached_particles'].items():
-        for k,v in particle_list.items():
-            dbc.execute('INSERT INTO new_tf2idb_particles (id,name) VALUES (?,?)', (k, v['system']) )   #TODO add the other fields too
+    for particle_type, particle_list in data['attribute_controlled_attached_particles'].items():
+        for id, property in particle_list.items():
+            dbc.execute('INSERT INTO new_tf2idb_particles (id, name, type) VALUES (?,?,?)',
+                    (id, property['system'], particle_type) )
 
     # attributes
     attribute_type = {}

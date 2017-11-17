@@ -142,10 +142,9 @@ def main(items_game, database_file):
     dbc.execute('CREATE INDEX "tf2idb_class_%i" ON "new_tf2idb_class" ("class" ASC)' % nonce)
     dbc.execute('CREATE INDEX "tf2idb_item_%i" ON "new_tf2idb_item" ("slot" ASC)' % nonce)
 
-
     # qualities
-    for qname,qdata in data['qualities'].items():
-        dbc.execute('INSERT INTO new_tf2idb_qualities (name, value) VALUES (?,?)', (qname, qdata['value']))
+    dbc.executemany('INSERT INTO new_tf2idb_qualities (name, value) VALUES (?,?)',
+            ((qname, qdata['value']) for qname, qdata in data['qualities'].items()))
 
     # particles
     for particle_type,particle_list in data['attribute_controlled_attached_particles'].items():
@@ -176,8 +175,8 @@ def main(items_game, database_file):
 
     # conflicts
     for k,v in data['equip_conflicts'].items():
-        for region in v.keys():
-            dbc.execute('INSERT INTO new_tf2idb_equip_conflicts (name,region) VALUES (?,?)', (k, region))
+        dbc.executemany('INSERT INTO new_tf2idb_equip_conflicts (name,region) VALUES (?,?)',
+                ((k, region) for region in v.keys()))
 
     # items
     for id,v in data['items'].items():
@@ -221,8 +220,8 @@ def main(items_game, database_file):
             if region_field:
                 if type(region_field) is str:
                     region_field = {region_field: 1}
-                for region in region_field.keys():
-                    dbc.execute('INSERT INTO new_tf2idb_equip_regions (id,region) VALUES (?,?)', (id, region))
+                dbc.executemany('INSERT INTO new_tf2idb_equip_regions (id,region) VALUES (?,?)',
+                        ((id, region) for region in region_field.keys()))
 
             # capabilties
             for capability,val in i.get('capabilities', {}).items():

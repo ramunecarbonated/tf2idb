@@ -6,6 +6,12 @@ import traceback
 import time
 import collections
 
+DATABASE_TABLES = [
+    'tf2idb_class', 'tf2idb_item_attributes', 'tf2idb_item', 'tf2idb_particles',
+    'tf2idb_equip_conflicts', 'tf2idb_equip_regions', 'tf2idb_capabilities',
+    'tf2idb_attributes', 'tf2idb_qualities'
+]
+
 #https://gist.github.com/angstwad/bf22d1822c38a92ec0a9
 def dict_merge(dct, merge_dct):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
@@ -49,63 +55,87 @@ def main(items_game, database_file):
     db = sqlite3.connect(database_file)
     dbc = db.cursor()
 
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_class')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_item_attributes')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_item')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_particles')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_equip_conflicts')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_equip_regions')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_capabilities')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_attributes')
-    dbc.execute('DROP TABLE IF EXISTS new_tf2idb_qualities')
+    for table in DATABASE_TABLES:
+        dbc.execute('DROP TABLE IF EXISTS new_{}'.format(table))
+    
+    def init_table(name: str, columns: list, primary_key = None):
+        # validates table name and columns
+        if not name in DATABASE_TABLES:
+            raise ValueError("'{}' not a defined table; add it to the 'DATABASE_TABLES' list".format(name))
+        
+        c = ', '.join(('"{}" {}'.format(k, v) for k, v in columns))
+        
+        if primary_key:
+            column_names = (column for column, *_ in columns)
+            if not all(key in column_names for key in primary_key):
+                raise ValueError("Primary key not a valid column in table '{}'".format(name))
+            c += ', PRIMARY KEY ({})'.format(', '.join( ('"{}"'.format(k)) for k in primary_key))
+        
+        query = 'CREATE TABLE "new_{}" ({})'.format(name, c)
+        dbc.execute(query)
 
-    dbc.execute('CREATE TABLE "new_tf2idb_class" ("id" INTEGER NOT NULL , "class" TEXT NOT NULL , "slot" TEXT , PRIMARY KEY ("id", "class"))')
-    dbc.execute('CREATE TABLE "new_tf2idb_item_attributes" ('
-        '"id" INTEGER NOT NULL,'
-        '"attribute" INTEGER NOT NULL,'
-        '"value" TEXT NOT NULL,'
-        '"static" INTEGER,'
-        'PRIMARY KEY ("id", "attribute")'
-        ')'
-    )
-    dbc.execute('CREATE TABLE "new_tf2idb_item" ('
-        '"id" INTEGER PRIMARY KEY NOT NULL,'
-        '"name" TEXT NOT NULL,'
-        '"item_name" TEXT,'
-        '"class" TEXT NOT NULL,'
-        '"slot" TEXT,'
-        '"quality" TEXT NOT NULL,'
-        '"tool_type" TEXT,'
-        '"min_ilevel" INTEGER,'
-        '"max_ilevel" INTEGER,'
-        '"baseitem" INTEGER,'
-        '"holiday_restriction" TEXT,'
-        '"has_string_attribute" INTEGER,'
-        '"propername" INTEGER'
-        ')'
-    )
-    dbc.execute('CREATE TABLE "new_tf2idb_particles" ("id" INTEGER PRIMARY KEY  NOT NULL , "name" TEXT NOT NULL )')
-    dbc.execute('CREATE TABLE "new_tf2idb_equip_conflicts" ("name" TEXT NOT NULL , "region" TEXT NOT NULL , PRIMARY KEY ("name", "region"))')
-    dbc.execute('CREATE TABLE "new_tf2idb_equip_regions" ("id" INTEGER NOT NULL , "region" TEXT NOT NULL , PRIMARY KEY ("id", "region"))')
-    dbc.execute('CREATE TABLE "new_tf2idb_capabilities"  ("id" INTEGER NOT NULL , "capability" TEXT NOT NULL )')
-    dbc.execute('CREATE TABLE "new_tf2idb_attributes" ('
-        '"id" INTEGER PRIMARY KEY NOT NULL,'
-        '"name" TEXT NOT NULL,'
-        '"attribute_class" TEXT,'
-        '"attribute_type" TEXT,'
-        '"description_string" TEXT,'
-        '"description_format" TEXT,'
-        '"effect_type" TEXT,'
-        '"hidden" INTEGER,'
-        '"stored_as_integer" INTEGER,'
-        '"armory_desc" TEXT,'
-        '"is_set_bonus" INTEGER,'
-        '"is_user_generated" INTEGER,'
-        '"can_affect_recipe_component_name" INTEGER,'
-        '"apply_tag_to_item_definition" TEXT'
-        ')'
-    )
-    dbc.execute('CREATE TABLE "new_tf2idb_qualities" ("name" TEXT PRIMARY KEY  NOT NULL , "value" INTEGER NOT NULL )')
+    init_table('tf2idb_class', [
+        ('id', 'INTEGER NOT NULL'), ('class', 'TEXT NOT NULL'), ('slot', 'TEXT')
+    ], primary_key = ('id', 'class'))
+    
+    init_table('tf2idb_item_attributes', [
+        ('id', 'INTEGER NOT NULL'), ('attribute', 'INTEGER NOT NULL'), ('value', 'TEXT NOT NULL'),
+        ('static', 'INTEGER')
+    ], primary_key = ('id', 'attribute'))
+    
+    init_table('tf2idb_item', [
+        ('id', 'INTEGER PRIMARY KEY NOT NULL'),
+        ('name', 'TEXT NOT NULL'),
+        ('item_name', 'TEXT'),
+        ('class', 'TEXT NOT NULL'),
+        ('slot', 'TEXT'),
+        ('quality', 'TEXT NOT NULL'),
+        ('tool_type', 'TEXT'),
+        ('min_ilevel', 'INTEGER'),
+        ('max_ilevel', 'INTEGER'),
+        ('baseitem', 'INTEGER'),
+        ('holiday_restriction', 'TEXT'),
+        ('has_string_attribute', 'INTEGER'),
+        ('propername', 'INTEGER')
+    ])
+    
+    init_table('tf2idb_particles', [
+        ('id', 'INTEGER PRIMARY KEY NOT NULL'), ('name', 'TEXT NOT NULL')
+    ])
+    
+    init_table('tf2idb_equip_conflicts', [
+        ('name', 'TEXT NOT NULL'), ('region', 'TEXT NOT NULL'),
+    ], primary_key = ('name', 'region'))
+    
+    init_table('tf2idb_equip_regions', [
+        ('id', 'INTEGER NOT NULL'), ('region', 'TEXT NOT NULL')
+    ], primary_key = ('id', 'region'))
+    
+    init_table('tf2idb_capabilities', [
+        ('id', 'INTEGER NOT NULL'), ('capability', 'TEXT NOT NULL')
+    ])
+    
+    init_table('tf2idb_attributes', [
+        ('id', 'INTEGER PRIMARY KEY NOT NULL'),
+        ('name', 'TEXT NOT NULL'),
+        ('attribute_class', 'TEXT'),
+        ('attribute_type', 'TEXT'),
+        ('description_string', 'TEXT'),
+        ('description_format', 'TEXT'),
+        ('effect_type', 'TEXT'),
+        ('hidden', 'INTEGER'),
+        ('stored_as_integer', 'INTEGER'),
+        ('armory_desc', 'TEXT'),
+        ('is_set_bonus', 'INTEGER'),
+        ('is_user_generated', 'INTEGER'),
+        ('can_affect_recipe_component_name', 'INTEGER'),
+        ('apply_tag_to_item_definition', 'TEXT')
+    ])
+    
+    init_table('tf2idb_qualities', [
+        ('name', 'TEXT PRIMARY KEY NOT NULL'),
+        ('value', 'INTEGER NOT NULL')
+    ])
 
     nonce = int(time.time())
     dbc.execute('CREATE INDEX "tf2idb_item_attributes_%i" ON "new_tf2idb_item_attributes" ("attribute" ASC)' % nonce)
@@ -203,19 +233,10 @@ def main(items_game, database_file):
             print(id)
             raise
 
-    def replace_table(name):
-        dbc.execute('DROP TABLE IF EXISTS %s' % name)
-        dbc.execute('ALTER TABLE new_%s RENAME TO %s' % (name,name))
-
-    replace_table('tf2idb_class')
-    replace_table('tf2idb_item_attributes')
-    replace_table('tf2idb_item')
-    replace_table('tf2idb_particles')
-    replace_table('tf2idb_equip_conflicts')
-    replace_table('tf2idb_equip_regions')
-    replace_table('tf2idb_capabilities')
-    replace_table('tf2idb_attributes')
-    replace_table('tf2idb_qualities')
+    # finalize tables
+    for table in DATABASE_TABLES:
+        dbc.execute('DROP TABLE IF EXISTS %s' % table)
+        dbc.execute('ALTER TABLE new_%s RENAME TO %s' % (table, table))
 
     db.commit()
     dbc.execute('VACUUM')

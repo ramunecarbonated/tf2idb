@@ -5,6 +5,7 @@ import sqlite3
 import traceback
 import time
 import collections
+from collections import defaultdict
 
 DATABASE_TABLES = [
     'tf2idb_class', 'tf2idb_item_attributes', 'tf2idb_item', 'tf2idb_particles',
@@ -167,11 +168,8 @@ def main(items_game, database_file):
         dbc.execute('INSERT INTO new_tf2idb_attributes '
             '(id,name,attribute_class,attribute_type,description_string,description_format,effect_type,hidden,stored_as_integer,armory_desc,is_set_bonus,'
                 'is_user_generated,can_affect_recipe_component_name,apply_tag_to_item_definition) '
-            'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-            (k,v.get('name'),v.get('attribute_class'),v.get('attribute_type'),v.get('description_string'),v.get('description_format'),
-                v.get('effect_type'),v.get('hidden'),v.get('stored_as_integer'),v.get('armory_desc'),v.get('is_set_bonus'),
-                v.get('is_user_generated'),v.get('can_affect_recipe_component_name'),v.get('apply_tag_to_item_definition')
-            )
+            'VALUES (:id, :name, :attribute_class, :attribute_type, :description_string, :description_format, :effect_type, :hidden, :stored_as_integer, :armory_desc, :is_set_bonus, :is_user_generated, :can_affect_recipe_component_name, :apply_tag_to_item_definition)',
+            defaultdict(lambda: None, { **{ 'id': k }, **v })
         )
 
     # conflicts
@@ -180,6 +178,8 @@ def main(items_game, database_file):
                 ((k, region) for region in v.keys()))
 
     # items
+    item_defaults = {'propername': 0, 'item_quality': ''}
+    
     for id,v in data['items'].items():
         if id == 'default':
             continue
@@ -204,11 +204,14 @@ def main(items_game, database_file):
                     has_string_attribute = True
                 dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,info['value'],0))
 
+            item_insert_values = {
+                'id': id, 'tool_type': tool, 'baseitem': baseitem, 'has_string_attribute': has_string_attribute
+            }
+            
             dbc.execute('INSERT INTO new_tf2idb_item '
                 '(id,name,item_name,class,slot,quality,tool_type,min_ilevel,max_ilevel,baseitem,holiday_restriction,has_string_attribute,propername) '
-                'VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)', 
-                (id,i['name'],i.get('item_name'),i['item_class'],i.get('item_slot'),i.get('item_quality', ''), tool, i.get('min_ilevel'), i.get('max_ilevel'),baseitem,
-                    i.get('holiday_restriction'), has_string_attribute, i.get('propername'))
+                'VALUES (:id, :name, :item_name, :item_class, :item_slot, :item_quality, :tool_type, :min_ilevel, :max_ilevel, :baseitem, :holiday_restriction, :has_string_attribute, :propername)',
+                defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i })
             )
 
             if 'used_by_classes' in i:

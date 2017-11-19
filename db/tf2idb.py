@@ -179,14 +179,7 @@ def main(items_game, database_file):
     # attributes
     attribute_type = {}
     for k,v in data['attributes'].items():
-        at = v.get('attribute_type')
-        if at:
-            atype = at
-        else:
-            if v.get('stored_as_integer'):
-                atype = 'integer'
-            else:
-                atype = 'float'
+        atype = v.get('attribute_type', 'integer' if v.get('stored_as_integer') else 'float')
         attribute_type[v['name'].lower()] = (k, atype)
         dbc.execute('INSERT INTO new_tf2idb_attributes '
             '(id,name,attribute_class,attribute_type,description_string,description_format,effect_type,hidden,stored_as_integer,armory_desc,is_set_bonus,'

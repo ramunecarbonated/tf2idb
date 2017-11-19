@@ -187,10 +187,6 @@ def main(items_game, database_file):
         baseitem = 'baseitem' in i
 
         try:
-            tool = None
-            if 'tool' in i:
-                tool = i['tool'].get('type')
-
             has_string_attribute = False
             for name,value in i.get('static_attrs', {}).items():
                 aid,atype = attribute_type[name.lower()]
@@ -204,6 +200,7 @@ def main(items_game, database_file):
                     has_string_attribute = True
                 dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,info['value'],0))
 
+            tool = i.get('tool', {}).get('type')
             item_insert_values = {
                 'id': id, 'tool_type': tool, 'baseitem': baseitem, 'has_string_attribute': has_string_attribute
             }
@@ -228,7 +225,6 @@ def main(items_game, database_file):
             # capabilties
             for capability,val in i.get('capabilities', {}).items():
                 dbc.execute('INSERT INTO new_tf2idb_capabilities (id,capability) VALUES (?,?)', (id, (capability if val != '0' else '!'+capability)))
-
         except:
             traceback.print_exc()
             print(id)

@@ -227,9 +227,9 @@ def main(items_game, database_file):
                 defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i })
             )
 
-            for prof, val in i.get('used_by_classes', {}).items():
-                dbc.execute('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
-                        (id, prof.lower(), val if val != '1' else None))
+            dbc.executemany('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
+                    ((id, prof.lower(), val if val != '1' else None)
+                    for prof, val in i.get('used_by_classes', {}).items()))
 
             region_field = i.get('equip_region') or i.get('equip_regions')
             if region_field:
@@ -239,8 +239,9 @@ def main(items_game, database_file):
                         ((id, region) for region in region_field.keys()))
 
             # capabilties
-            for capability,val in i.get('capabilities', {}).items():
-                dbc.execute('INSERT INTO new_tf2idb_capabilities (id,capability) VALUES (?,?)', (id, (capability if val != '0' else '!'+capability)))
+            dbc.executemany('INSERT INTO new_tf2idb_capabilities (id,capability) VALUES (?,?)',
+                    ((id, (capability if val != '0' else '!'+capability))
+                    for capability, val in i.get('capabilities', {}).items()))
             
             # custom extended capabilities
             if item_has_australium_support(int(id), i):

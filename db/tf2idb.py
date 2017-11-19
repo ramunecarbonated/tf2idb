@@ -278,10 +278,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.items_game) or os.path.isdir(args.items_game):
+    if not os.path.isfile(args.items_game) and os.path.exists(args.items_game):
         raise ValueError("items_game.txt not found or is not a file")
 
-    if not os.path.isfile(args.database):
+    if not os.path.isfile(args.database) and os.path.exists(args.database):
         raise ValueError("missing output database or is not a file")
 
     main(args.items_game, args.database)

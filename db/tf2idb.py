@@ -47,6 +47,29 @@ def resolve_prefabs(item, data):
         prefab_aggregate = item.copy()
     return prefab_aggregate
 
+def item_has_australium_support(defindex: int, properties: dict):
+    '''
+    Returns True if the specified item seems to have australium support.
+    '''
+    banned_attrs = [ 'paintkit_proto_def_index', 'limited quantity item' ]
+    banned_class = [ 'craft_item', '' ]
+    banned_defindex = [ 482 ]
+    
+    if (properties.get('item_quality') == 'unique'
+            and properties.get('craft_material_type') == 'weapon'
+            and not defindex in banned_defindex
+            and not properties.get('item_class') in banned_class
+            and not any(attr in banned_attrs for attr in properties.get('static_attrs', {}))):
+        return any(style.get('image_inventory', '').endswith('_gold')
+                for _, style in properties.get('visuals', {}).get('styles', {}).items())
+    return False
+
+def item_has_paintkit_support(defindex: int, properties: dict):
+    '''
+    Returns True if the specified item seems to have paintkit support.
+    '''
+    return 'paintkit_base' in properties.get('prefab', '').split()
+
 def main(items_game, database_file):
     data = None
     with open(items_game) as f:
@@ -225,6 +248,14 @@ def main(items_game, database_file):
             # capabilties
             for capability,val in i.get('capabilities', {}).items():
                 dbc.execute('INSERT INTO new_tf2idb_capabilities (id,capability) VALUES (?,?)', (id, (capability if val != '0' else '!'+capability)))
+            
+            if item_has_australium_support(int(id), i):
+                dbc.execute('INSERT INTO new_tf2idb_capabilities (id, capability) VALUES (?, ?)',
+                        (id, 'supports_australium'))
+            if item_has_paintkit_support(int(id), i):
+                dbc.execute('INSERT INTO new_tf2idb_capabilities (id, capability) VALUES (?, ?)',
+                        (id, 'can_apply_paintkit'))
+
         except:
             traceback.print_exc()
             print(id)

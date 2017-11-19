@@ -7,6 +7,11 @@ import time
 import collections
 from collections import defaultdict
 
+class ItemParseError(Exception):
+    def __init__(self, defindex):
+        self.defindex = int(defindex)
+        Exception.__init__(self, 'Item parsing error occurred at defindex {}'.format(defindex))
+
 DATABASE_TABLES = [
     'tf2idb_class', 'tf2idb_item_attributes', 'tf2idb_item', 'tf2idb_particles',
     'tf2idb_equip_conflicts', 'tf2idb_equip_regions', 'tf2idb_capabilities',
@@ -250,11 +255,8 @@ def main(items_game, database_file):
             if item_has_paintkit_support(int(id), i):
                 dbc.execute('INSERT INTO new_tf2idb_capabilities (id, capability) VALUES (?, ?)',
                         (id, 'can_apply_paintkit'))
-
-        except:
-            traceback.print_exc()
-            print(id)
-            raise
+        except Exception as e:
+            raise ItemParseError(id) from e
 
     # finalize tables
     for table in DATABASE_TABLES:

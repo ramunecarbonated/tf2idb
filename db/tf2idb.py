@@ -6,6 +6,7 @@ import traceback
 import time
 import collections
 from collections import defaultdict
+import copy
 
 class ItemParseError(Exception):
     def __init__(self, defindex):
@@ -35,22 +36,24 @@ def dict_merge(dct, merge_dct):
             dict_merge(dct[k], v)
         else:
             if (callable(getattr(v, "copy", None))):
-                dct[k] = v.copy()
+                dct[k] = copy.deepcopy(v)
             else:
                 dct[k] = v
 
-def resolve_prefabs(item, data):
-    prefabs = item.get('prefab')
-    prefab_aggregate = {}
-    if prefabs:
-        for prefab in prefabs.split():
-            prefab_data = data['prefabs'][prefab].copy()
-            prefab_data = resolve_prefabs(prefab_data, data)
-            dict_merge(prefab_aggregate, prefab_data)
-        dict_merge(prefab_aggregate, item)
-    else:
-        prefab_aggregate = item.copy()
-    return prefab_aggregate
+def resolve_prefabs(item, prefabs):
+    # generate list of prefabs
+    prefab_list = item.get('prefab', '').split()
+    for prefab in prefab_list:
+        subprefabs = prefabs[prefab].get('prefab', '').split()
+        prefab_list.extend(p for p in subprefabs if p not in prefab_list)
+    
+    # iterate over prefab list and merge, nested prefabs first
+    result = {}
+    for prefab in ( prefabs[p] for p in reversed(prefab_list) ):
+        dict_merge(result, prefab)
+    
+    dict_merge(result, item)
+    return result, prefab_list
 
 def item_has_australium_support(defindex: int, properties: dict):
     '''
@@ -204,7 +207,7 @@ def main(items_game, database_file):
     for id,v in data['items'].items():
         if id == 'default':
             continue
-        i = resolve_prefabs(v, data)
+        i, prefabs_used = resolve_prefabs(v, data['prefabs'])
         baseitem = 'baseitem' in i
 
         try:

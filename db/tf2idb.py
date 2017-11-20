@@ -48,6 +48,7 @@ def resolve_prefabs(item, prefabs):
         prefab_list.extend(p for p in subprefabs if p not in prefab_list)
     
     # iterate over prefab list and merge, nested prefabs first
+    # TODO make sure this is the same behavior the engine uses
     result = {}
     for prefab in ( prefabs[p] for p in reversed(prefab_list) ):
         dict_merge(result, prefab)
@@ -146,7 +147,7 @@ def main(items_game, database_file):
     
     init_table('tf2idb_capabilities', [
         ('id', 'INTEGER NOT NULL'), ('capability', 'TEXT NOT NULL')
-    ])
+    ], primary_key = ('id', 'capability'))
     
     init_table('tf2idb_attributes', [
         ('id', 'INTEGER PRIMARY KEY NOT NULL'),

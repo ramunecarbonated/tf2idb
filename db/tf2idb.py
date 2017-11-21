@@ -13,12 +13,6 @@ class ItemParseError(Exception):
         self.defindex = int(defindex)
         Exception.__init__(self, 'Item parsing error occurred at defindex {}'.format(defindex))
 
-DATABASE_TABLES = [
-    'tf2idb_class', 'tf2idb_item_attributes', 'tf2idb_item', 'tf2idb_particles',
-    'tf2idb_equip_conflicts', 'tf2idb_equip_regions', 'tf2idb_capabilities',
-    'tf2idb_attributes', 'tf2idb_qualities'
-]
-
 #https://gist.github.com/angstwad/bf22d1822c38a92ec0a9
 def dict_merge(dct, merge_dct):
     """ Recursive dict merge. Inspired by :meth:``dict.update()``, instead of
@@ -84,15 +78,10 @@ def main(items_game, database_file):
 
     db = sqlite3.connect(database_file)
     dbc = db.cursor()
-
-    for table in DATABASE_TABLES:
-        dbc.execute('DROP TABLE IF EXISTS new_{}'.format(table))
+    
+    created_tables = {}
     
     def init_table(name: str, columns: list, primary_key = None):
-        # validates table name and columns
-        if not name in DATABASE_TABLES:
-            raise ValueError("'{}' not a defined table; add it to the 'DATABASE_TABLES' list".format(name))
-        
         c = ', '.join(('"{}" {}'.format(k, v) for k, v in columns))
         
         if primary_key:
@@ -102,7 +91,21 @@ def main(items_game, database_file):
             c += ', PRIMARY KEY ({})'.format(', '.join( ('"{}"'.format(k)) for k in primary_key))
         
         query = 'CREATE TABLE "new_{}" ({})'.format(name, c)
+        
+        dbc.execute('DROP TABLE IF EXISTS new_{}'.format(name))
         dbc.execute(query)
+        
+        created_tables[name] = [ column for column, *_ in columns ]
+    
+    def insert_dict(name: str, item: dict, prop_remap: dict = {}):
+        if not name in created_tables:
+            raise ValueError("Table '{}' does not exist")
+        
+        dbc.execute('INSERT INTO new_{name} ({cols}) VALUES ({args})'.format(
+                name = name,
+                cols = ','.join(created_tables[name]),
+                args = ','.join(':' + prop_remap.get(col, col) for col in created_tables[name])),
+                item)
 
     init_table('tf2idb_class', [
         ('id', 'INTEGER NOT NULL'), ('class', 'TEXT NOT NULL'), ('slot', 'TEXT')
@@ -187,12 +190,7 @@ def main(items_game, database_file):
     for k,v in data['attributes'].items():
         atype = v.get('attribute_type', 'integer' if v.get('stored_as_integer') else 'float')
         attribute_type[v['name'].lower()] = (k, atype)
-        dbc.execute('INSERT INTO new_tf2idb_attributes '
-            '(id,name,attribute_class,attribute_type,description_string,description_format,effect_type,hidden,stored_as_integer,armory_desc,is_set_bonus,'
-                'is_user_generated,can_affect_recipe_component_name,apply_tag_to_item_definition) '
-            'VALUES (:id, :name, :attribute_class, :attribute_type, :description_string, :description_format, :effect_type, :hidden, :stored_as_integer, :armory_desc, :is_set_bonus, :is_user_generated, :can_affect_recipe_component_name, :apply_tag_to_item_definition)',
-            defaultdict(lambda: None, { **{ 'id': k }, **v })
-        )
+        insert_dict('tf2idb_attributes', defaultdict(lambda: None, { **{ 'id': k }, **v }))
 
     # conflicts
     for k,v in data['equip_conflicts'].items():
@@ -227,11 +225,9 @@ def main(items_game, database_file):
                 'id': id, 'tool_type': tool, 'baseitem': baseitem, 'has_string_attribute': has_string_attribute
             }
             
-            dbc.execute('INSERT INTO new_tf2idb_item '
-                '(id,name,item_name,class,slot,quality,tool_type,min_ilevel,max_ilevel,baseitem,holiday_restriction,has_string_attribute,propername) '
-                'VALUES (:id, :name, :item_name, :item_class, :item_slot, :item_quality, :tool_type, :min_ilevel, :max_ilevel, :baseitem, :holiday_restriction, :has_string_attribute, :propername)',
-                defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i })
-            )
+            insert_dict('tf2idb_item',
+                    defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i }),
+                    prop_remap = {'class': 'item_class', 'slot': 'item_slot', 'quality': 'item_quality'})
 
             dbc.executemany('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
                     ((id, prof.lower(), val if val != '1' else None)
@@ -260,7 +256,7 @@ def main(items_game, database_file):
             raise ItemParseError(id) from e
 
     # finalize tables
-    for table in DATABASE_TABLES:
+    for table in created_tables.keys():
         dbc.execute('DROP TABLE IF EXISTS %s' % table)
         dbc.execute('ALTER TABLE new_%s RENAME TO %s' % (table, table))
 

@@ -70,13 +70,20 @@ def item_has_paintkit_support(defindex: int, properties: dict):
     '''
     return 'paintkit_base' in properties.get('prefab', '').split()
 
-def main(items_game, database_file):
+def main(items_game: str, database_file: str):
+    '''
+    Legacy interface for calling tf2idb.parse()
+    (The new function call lets you pass in a database instead.)
+    '''
+    with sqlite3.connect(database_file) as db:
+        parse(items_game, db)
+
+def parse(items_game: str, db: sqlite3.Connection):
     data = None
     with open(items_game) as f:
         data = vdf.parse(f)
         data = data['items_game']
 
-    db = sqlite3.connect(database_file)
     dbc = db.cursor()
     
     created_tables = {}
@@ -262,7 +269,6 @@ def main(items_game, database_file):
 
     db.commit()
     dbc.execute('VACUUM')
-    db.close()
 
 if __name__ == "__main__":
     import argparse, os

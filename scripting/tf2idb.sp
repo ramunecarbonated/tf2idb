@@ -53,7 +53,7 @@ new Handle:g_db;
 //new Handle:g_statement_IsValidItemID;
 new Handle:g_statement_GetItemClass;
 new Handle:g_statement_GetItemName;
-new Handle:g_statement_GetItemSlotName;
+//new Handle:g_statement_GetItemSlotName;
 new Handle:g_statement_GetItemQualityName;
 new Handle:g_statement_GetItemLevels;
 new Handle:g_statement_GetItemAttributes;
@@ -103,7 +103,7 @@ public OnPluginStart() {
 //	PREPARE_STATEMENT(g_statement_IsValidItemID, "SELECT id FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemClass, "SELECT class FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemName, "SELECT name FROM tf2idb_item WHERE id=?")
-	PREPARE_STATEMENT(g_statement_GetItemSlotName, "SELECT slot FROM tf2idb_item WHERE id=?")
+//	PREPARE_STATEMENT(g_statement_GetItemSlotName, "SELECT slot FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemQualityName, "SELECT quality FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemLevels, "SELECT min_ilevel,max_ilevel FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemAttributes, "SELECT attribute,value FROM tf2idb_item_attributes WHERE id=?")
@@ -111,7 +111,7 @@ public OnPluginStart() {
 	PREPARE_STATEMENT(g_statement_ListParticles, "SELECT id FROM tf2idb_particles")
 	PREPARE_STATEMENT(g_statement_DoRegionsConflict, "SELECT a.name FROM tf2idb_equip_conflicts a JOIN tf2idb_equip_conflicts b ON a.name=b.name WHERE a.region=? AND b.region=?")
 	PREPARE_STATEMENT(g_statement_ItemHasAttribute, "SELECT attribute FROM tf2idb_item a JOIN tf2idb_item_attributes b ON a.id=b.id WHERE a.id=? AND attribute=?")
-	PREPARE_STATEMENT(g_statement_GetItemSlotNameByClass, "SELECT slot FROM tf2idb_class WHERE id=? AND class=?")
+	PREPARE_STATEMENT(g_statement_GetItemSlotNameByClass, "SELECT slot FROM tf2idb_class WHERE id=? AND (class=? OR class='all')")
 	PREPARE_STATEMENT(g_statement_UsedByClasses, "SELECT class FROM tf2idb_class WHERE id=?")
 
 //	PREPARE_STATEMENT(g_statement_IsValidAttributeID, "SELECT id FROM tf2idb_attributes WHERE id=?")

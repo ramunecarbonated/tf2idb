@@ -192,6 +192,17 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
         ('name', 'TEXT PRIMARY KEY NOT NULL'),
         ('value', 'INTEGER NOT NULL')
     ])
+    
+    init_table('tf2idb_rarities', [
+        ('name', 'TEXT PRIMARY KEY NOT NULL'),
+        ('value', 'INTEGER NOT NULL')
+    ])
+    
+    init_table('tf2idb_item_rarities', [
+        ('id', 'INTEGER PRIMARY KEY NOT NULL'),
+        ('rarity', 'INTEGER'),
+        ('collection', 'TEXT')
+    ])
 
     nonce = int(time.time())
     dbc.execute('CREATE INDEX "tf2idb_item_attributes_%i" ON "new_tf2idb_item_attributes" ("attribute" ASC)' % nonce)
@@ -219,12 +230,25 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
         dbc.executemany('INSERT INTO new_tf2idb_equip_conflicts (name,region) VALUES (?,?)',
                 ((k, region) for region in v.keys()))
 
+    # rarities
+    db.executemany('INSERT INTO new_tf2idb_rarities (name, value) VALUES (?, ?)',
+            ((rname, rdata['value']) for rname, rdata in data['rarities'].items()))
+    
+    # item / rarity mapping
+    item_rarity = {}
+    for collection, collection_desc in data['item_collections'].items():
+        for rarity, itemlist in collection_desc['items'].items():
+            if rarity in data['rarities']:
+                for item in itemlist:
+                    item_rarity[item] = (collection, int(data['rarities'][rarity]['value']))
+    
     # items
     item_defaults = {'propername': 0, 'item_quality': ''}
     
     for id,v in data['items'].items():
         if id == 'default':
             continue
+        
         i, prefabs_used = resolve_prefabs(v, data['prefabs'])
         baseitem = 'baseitem' in i
 
@@ -281,6 +305,11 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
             if item_has_paintkit_support(int(id), i):
                 dbc.execute('INSERT INTO new_tf2idb_capabilities (id, capability) VALUES (?, ?)',
                         (id, 'can_apply_paintkit'))
+            
+            # item rarity
+            if i['name'] in item_rarity:
+                dbc.execute('INSERT INTO new_tf2idb_item_rarities (id, collection, rarity) VALUES (?, ?, ?)',
+                        (id,) + item_rarity[ i['name'] ])
         except Exception as e:
             raise ItemParseError(id) from e
 

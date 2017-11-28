@@ -8,6 +8,9 @@ import collections
 from collections import defaultdict
 import copy
 
+CLASSES_USABLE = [ 'scout', 'soldier', 'pyro', 'demoman', 'heavy', 'engineer',
+        'medic', 'sniper', 'spy' ]
+
 class ItemParseError(Exception):
     def __init__(self, defindex):
         self.defindex = int(defindex)
@@ -78,7 +81,15 @@ def main(items_game: str, database_file: str):
     with sqlite3.connect(database_file) as db:
         parse(items_game, db)
 
-def parse(items_game: str, db: sqlite3.Connection):
+def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
+    """
+    Parses items_game.txt into a database format usable by TF2IDB.
+    
+    :param items_game:  The items_game.txt file from TF2.
+    :param db:  An SQLite3 connection.
+    :param merge_allclass:  Whether or not items designated as usable by every class should use
+    the 'all' keyword.  Defaults to True.  Set to false if using a different TF2IDB fork.
+    """
     data = None
     with open(items_game) as f:
         data = vdf.parse(f)
@@ -236,9 +247,15 @@ def parse(items_game: str, db: sqlite3.Connection):
                     defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i }),
                     prop_remap = {'class': 'item_class', 'slot': 'item_slot', 'quality': 'item_quality'})
 
-            dbc.executemany('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
-                    ((id, prof.lower(), val if val != '1' else None)
-                    for prof, val in i.get('used_by_classes', {}).items()))
+            used_classes = i.get('used_by_classes', {})
+            if merge_allclass and all(c in used_classes for c in CLASSES_USABLE):
+                # insert the 'all' keyword into tf2idb_class instead of a row for each class
+                dbc.execute('INSERT INTO new_tf2idb_class (id, class, slot) VALUES (?, ?, ?)',
+                        (id, 'all', None))
+            else:
+                dbc.executemany('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
+                        ((id, prof.lower(), val if val != '1' else None)
+                        for prof, val in used_classes.items()))
 
             region_field = i.get('equip_region') or i.get('equip_regions')
             if region_field:

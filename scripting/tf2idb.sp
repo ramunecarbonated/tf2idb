@@ -572,7 +572,12 @@ public Native_UsedByClasses(Handle:hPlugin, nParams) {
 	
 	while (SQL_FetchRow(g_statement_UsedByClasses)) {
 		if (SQL_FetchString(g_statement_UsedByClasses, 0, class, sizeof(class)) > 0) {
-			result |= (1 << _:TF2_GetClass(class));
+			if (StrEqual(class, "all")) {
+				// all classes
+				result = 0b1111111110;
+			} else {
+				result |= (1 << _:TF2_GetClass(class));
+			}
 		}
 	}
 	return result;

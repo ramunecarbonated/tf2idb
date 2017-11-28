@@ -77,6 +77,10 @@ def main(items_game: str, database_file: str):
     '''
     Legacy interface for calling tf2idb.parse()
     (The new function call lets you pass in a database instead.)
+    
+    :param items_game:  Path to the items_game.txt file from TF2.
+    :param database_file:  Path to a database file.  This file will be opened and closed in the
+    process.
     '''
     with sqlite3.connect(database_file) as db:
         parse(items_game, db)
@@ -85,10 +89,10 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
     """
     Parses items_game.txt into a database format usable by TF2IDB.
     
-    :param items_game:  The items_game.txt file from TF2.
+    :param items_game:  Path to the items_game.txt file from TF2.
     :param db:  An SQLite3 connection.
     :param merge_allclass:  Whether or not items designated as usable by every class should use
-    the 'all' keyword.  Defaults to True.  Set to false if using a different TF2IDB fork.
+    the 'all' keyword.  Defaults to True.  Set to false if using a different branch of TF2IDB.
     """
     data = None
     with open(items_game) as f:
@@ -247,14 +251,15 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
                     defaultdict(lambda: None, { **item_defaults, **item_insert_values, **i }),
                     prop_remap = {'class': 'item_class', 'slot': 'item_slot', 'quality': 'item_quality'})
 
+            default_slot = i.get('item_slot', None)
             used_classes = i.get('used_by_classes', {})
             if merge_allclass and all(c in used_classes for c in CLASSES_USABLE):
                 # insert the 'all' keyword into tf2idb_class instead of a row for each class
                 dbc.execute('INSERT INTO new_tf2idb_class (id, class, slot) VALUES (?, ?, ?)',
-                        (id, 'all', None))
+                        (id, 'all', default_slot))
             else:
                 dbc.executemany('INSERT INTO new_tf2idb_class (id,class,slot) VALUES (?,?,?)',
-                        ((id, prof.lower(), val if val != '1' else None)
+                        ((id, prof.lower(), val if val != '1' else default_slot)
                         for prof, val in used_classes.items()))
 
             region_field = i.get('equip_region') or i.get('equip_regions')

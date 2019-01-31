@@ -21,6 +21,7 @@ public APLRes:AskPluginLoad2(Handle:hPlugin, bool:bLateLoad, String:sError[], iE
 	CreateNative("TF2IDB_GetItemQuality", Native_GetItemQuality);
 	CreateNative("TF2IDB_GetItemLevels", Native_GetItemLevels);
 	CreateNative("TF2IDB_GetItemAttributes", Native_GetItemAttributes);
+	CreateNative("TF2IDB_GetItemModel", Native_GetItemModel);
 	CreateNative("TF2IDB_GetItemEquipRegions", Native_GetItemEquipRegions);
 	CreateNative("TF2IDB_DoRegionsConflict", Native_DoRegionsConflict);
 	CreateNative("TF2IDB_ListParticles", Native_ListParticles);
@@ -57,6 +58,7 @@ new Handle:g_statement_GetItemName;
 new Handle:g_statement_GetItemQualityName;
 new Handle:g_statement_GetItemLevels;
 new Handle:g_statement_GetItemAttributes;
+new Handle:g_statement_GetItemModel;
 new Handle:g_statement_GetItemEquipRegions;
 new Handle:g_statement_ListParticles;
 new Handle:g_statement_DoRegionsConflict;
@@ -106,6 +108,7 @@ public OnPluginStart() {
 //	PREPARE_STATEMENT(g_statement_GetItemSlotName, "SELECT slot FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemQualityName, "SELECT quality FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemLevels, "SELECT min_ilevel,max_ilevel FROM tf2idb_item WHERE id=?")
+	PREPARE_STATEMENT(g_statement_GetItemModel, "SELECT model_player FROM tf2idb_item WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemAttributes, "SELECT attribute,value FROM tf2idb_item_attributes WHERE id=?")
 	PREPARE_STATEMENT(g_statement_GetItemEquipRegions, "SELECT region FROM tf2idb_equip_regions WHERE id=?")
 	PREPARE_STATEMENT(g_statement_ListParticles, "SELECT id FROM tf2idb_particles")
@@ -435,6 +438,21 @@ public Native_GetItemAttributes(Handle:hPlugin, nParams) {
 	}
 
 	return index;
+}
+
+public Native_GetItemModel(Handle:hPlugin, nParams) {
+	new id = GetNativeCell(1);
+	new size = GetNativeCell(3);
+	SQL_BindParamInt(g_statement_GetItemModel, 0, id);
+	SQL_Execute(g_statement_GetItemModel);
+	if(SQL_FetchRow(g_statement_GetItemModel)) {
+		decl String:buffer[size];
+		SQL_FetchString(g_statement_GetItemModel, 0, buffer, size);
+		SetNativeString(2, buffer, size);
+		return true;
+	} else {
+		return false;
+	}
 }
 
 public Native_GetItemEquipRegions(Handle:hPlugin, nParams) {

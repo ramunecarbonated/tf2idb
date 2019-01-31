@@ -320,15 +320,16 @@ public Native_GetItemSlotName(Handle:hPlugin, nParams) {
 				return true;
 			}
 		}
+	} else {
+		decl String:strId[16];
+		IntToString(id, strId, sizeof(strId));
+
+		if(GetTrieString(g_slot_cache, strId, slot, size)) {
+			SetNativeString(2, slot, size);
+			return true;
+		}
 	}
 
-	decl String:strId[16];
-	IntToString(id, strId, sizeof(strId));
-
-	if(GetTrieString(g_slot_cache, strId, slot, size)) {
-		SetNativeString(2, slot, size);
-		return true;
-	}
 	return false;
 
 	/*

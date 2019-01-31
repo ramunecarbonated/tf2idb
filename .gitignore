@@ -10,6 +10,9 @@
 ## Ignore python cache files
 *.pyc
 
+## Ignore items_game.txt
+items_game.txt
+
 ## If you are working with third party extensions/plugins.
 ## You might want to uncomment this, unless your plugin is the one
 ## that provides that functionality

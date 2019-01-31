@@ -151,7 +151,8 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
         ('baseitem', 'INTEGER'),
         ('holiday_restriction', 'TEXT'),
         ('has_string_attribute', 'INTEGER'),
-        ('propername', 'INTEGER')
+        ('propername', 'INTEGER'),
+        ('model_player', 'TEXT')
     ])
     
     init_table('tf2idb_particles', [
@@ -267,8 +268,9 @@ def parse(items_game: str, db: sqlite3.Connection, merge_allclass = True):
                 dbc.execute('INSERT INTO new_tf2idb_item_attributes (id,attribute,value,static) VALUES (?,?,?,?)', (id,aid,info['value'],0))
 
             tool = i.get('tool', {}).get('type')
+            model_player = i.get('model_player', None)
             item_insert_values = {
-                'id': id, 'tool_type': tool, 'baseitem': baseitem, 'has_string_attribute': has_string_attribute
+                'id': id, 'tool_type': tool, 'baseitem': baseitem, 'has_string_attribute': has_string_attribute, 'model_player': model_player
             }
             
             insert_dict('tf2idb_item',
